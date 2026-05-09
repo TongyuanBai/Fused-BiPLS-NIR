@@ -32,7 +32,6 @@ Model performance is quantified using:
 * `benchmark_models.R`: Executes 30 independent random splits (80% calibration, 20% test) for all 7 methods across 6 benchmark datasets.
 * `sensitivity_analysis.R`: Conducts a parallelized grid search on $\lambda$ to evaluate the trade-off between interval count and RMSECV.
 * `/data`: Contains spectral datasets in `.mat`, `.csv`, and `.xlsx` formats.
-* `/results`: Stores detailed CSV logs and visualization plots.
 
 ## Usage
 1.  **Environment**: Requires R 4.x with packages `genlasso`, `prospectr`, `pls`, `glmnet`, `R.matlab`, and `ggplot2`.
