@@ -29,8 +29,9 @@ Model performance is quantified using:
 * Cohen’s $d$ effect size for statistical comparison across 30 independent repetitions
 
 ## Repository Structure
-* `benchmark_models.R`: Executes 30 independent random splits (80% calibration, 20% test) for all 7 methods across 6 benchmark datasets.
-* `sensitivity_analysis.R`: Conducts a parallelized grid search on $\lambda$ to evaluate the trade-off between interval count and RMSECV.
+* `/code`: Contains the core R scripts for the framework.
+  * `benchmark_models.R`: Executes 30 independent random splits (80% calibration, 20% test) for all 7 methods across 6 benchmark datasets.
+  * `sensitivity_analysis.R`: Conducts a parallelized grid search on $\lambda$ to evaluate the trade-off between interval count and RMSECV.
 * `/data`: Contains spectral datasets in `.mat`, `.csv`, and `.xlsx` formats.
 
 ## Usage
@@ -38,8 +39,3 @@ Model performance is quantified using:
 2.  **Execution**: 
     * Run `benchmark_models.R` to reproduce comparative results for Corn, Diesel, Meat, Milk, Soil, and Tablet datasets.
     * Run `sensitivity_analysis.R` to generate $\lambda$ sensitivity curves for specific datasets.
-
-## Affiliation
-* **Author**: Tongyuan Bai
-* **Institution**: Department of Statistics and Data Science, Beijing Normal University-Hong Kong Baptist University United International College / Hong Kong Baptist University
-* **Supervisor**: Prof. Ping He
