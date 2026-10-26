@@ -1,5 +1,18 @@
 # ==============================================================================
-# Fused-BiPLS Sensitivity Analysis - Parallelized Edition
+# Fused-BiPLS: sensitivity analysis of the fusion parameter lambda (Figure 4)
+#
+# For each dataset (k = 0.7, seed = 42), the exact fused lasso solution path is
+# computed on the training subset. At up to 50 lambda values along the path, the
+# fused segments are passed to BiPLS, and the number of segments and the
+# resulting RMSECV are recorded. The lambda that minimises Mallows' Cp is
+# marked as the selected value.
+#
+# Usage (from the repository root):
+#   Rscript code/sensitivity_analysis.R
+#
+# Output: ./results/lambda_rmsecv_intervals_<dataset>.csv  (input of
+#         code/plot_figure4_sensitivity.py) and
+#         ./results/lambda_sensitivity_<dataset>.pdf       (single-panel plots)
 # ==============================================================================
 
 library(parallel)
@@ -11,44 +24,54 @@ library(ggplot2)
 library(scales)
 library(readxl)
 library(pbapply)   # For parallel progress bar
-library(extrafont) # For publication-quality plot fonts
 
 # ================= 1. Global Setup & Fonts =================
-# Note: Run font_import(prompt = FALSE) once if 'Times New Roman' is not recognized.
-loadfonts(device = "win", quiet = TRUE) 
+FONT_FAMILY <- "Times New Roman"
+# On Windows, fonts are registered through extrafont; run
+# extrafont::font_import(prompt = FALSE) once if the font is not recognised.
+if (.Platform$OS.type == "windows" && requireNamespace("extrafont", quietly = TRUE)) {
+  extrafont::loadfonts(device = "win", quiet = TRUE)
+}
 
 MAX_LVS <- 20    # Maximum number of latent variables for BiPLS
+data_dir <- Sys.getenv("FUSED_BIPLS_DATA_DIR", "./data")
 out_dir <- "./results"
 if(!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
 
 dataset_names <- c("corn", "diesel", "meat", "milk", "soil", "tablet")
 
 # ================= 2. Data Loading Function =================
+# Locate a data file; the match is case-insensitive (e.g. NIRdata_tablets.MAT).
+data_file <- function(file_name) {
+  hits <- list.files(data_dir, full.names = TRUE)
+  hits <- hits[tolower(basename(hits)) == tolower(file_name)]
+  if (length(hits) == 0) stop(sprintf("File '%s' not found in '%s'. See data/README.md.", file_name, data_dir))
+  hits[1]
+}
+
 load_dataset <- function(ds_name) {
-  data_dir <- "./data"
-  
   if (ds_name == "corn") {
-    mat_data <- readMat(file.path(data_dir, "corn.mat"))
+    mat_data <- readMat(data_file("corn.mat"))
     y <- as.numeric(mat_data$propvals$data[, 1])
     X <- as.matrix(mat_data$m5spec$data)
   } else if (ds_name == "diesel") {
-    df <- read.csv(file.path(data_dir, "Filtered_Diesel_Spec_Data.csv"), header = TRUE)
+    df <- read.csv(data_file("Filtered_Diesel_Spec_Data.csv"), header = TRUE)
     y  <- as.numeric(df[,1])
     X  <- as.matrix(df[,-1])
   } else if (ds_name == "meat") {
-    df <- read_excel(file.path(data_dir, "Tecator.xlsx"))
+    df <- read_excel(data_file("Tecator.xlsx"))
     y  <- as.numeric(df[[1]])
     X  <- as.matrix(df[, -1])
   } else if (ds_name == "milk") {
-    mat_data <- readMat(file.path(data_dir, "milk.mat"))
+    mat_data <- readMat(data_file("milk.mat"))
     y  <- as.numeric(mat_data$protein)
     X  <- as.matrix(mat_data$X)
   } else if (ds_name == "soil") {
-    df <- readMat(file.path(data_dir, "NIRsoil.mat"))
+    df <- readMat(data_file("NIRsoil.mat"))
     y  <- as.numeric(df$soilref$data[,1])
     X  <- as.matrix(df$soil$data)
   } else if (ds_name == "tablet") {
-    mat_data <- readMat(file.path(data_dir, "NIRdata_tablets.mat"))
+    mat_data <- readMat(data_file("NIRdata_tablets.mat"))
     y  <- as.numeric(mat_data$Matrix[, 1])
     X  <- as.matrix(mat_data$Matrix[, 4:407])
   }
@@ -231,7 +254,7 @@ run_sensitivity_analysis <- function(ds_name, k = 0.7, seed = 42) {
     
     annotate("point", x = log_opt_lambda_cp, y = RMSECV_scaled[opt_k_idx], color = "red", shape = 8, size = 3) +
     annotate("text", x = log_opt_lambda_cp, y = RMSECV_scaled[opt_k_idx], 
-             label = "optimal value", vjust = -1, hjust = 0.5, size = 3.5, color = "red", family = "Times New Roman") +
+             label = "optimal value", vjust = -1, hjust = 0.5, size = 3.5, color = "red", family = FONT_FAMILY) +
     geom_vline(xintercept = log_opt_lambda_cp, linetype = "dotted", color = "gray50", size = 0.8) +
     
     scale_color_manual(name = NULL, values = c("Number of Intervals" = "#4C72B0", "RMSECV" = "#DD8452")) +
@@ -240,7 +263,7 @@ run_sensitivity_analysis <- function(ds_name, k = 0.7, seed = 42) {
     scale_y_continuous(
       sec.axis = sec_axis(~ rescale(., from = range_segcount, to = range_rmsecv), name = "RMSECV (after BiPLS)") 
     ) +
-    theme_classic(base_size = 12, base_family = "Times New Roman") +
+    theme_classic(base_size = 12, base_family = FONT_FAMILY) +
     theme(
       axis.title.x = element_text(size = 13, color = "black", margin = margin(t = 5)),
       axis.title.y = element_text(size = 13, color = "black", margin = margin(r = 5)),
@@ -249,7 +272,7 @@ run_sensitivity_analysis <- function(ds_name, k = 0.7, seed = 42) {
       legend.position = c(0.75, 0.85),
       legend.background = element_blank(),
       legend.key = element_blank(),
-      legend.text = element_text(size = 11, color = "black", family = "Times New Roman"),
+      legend.text = element_text(size = 11, color = "black", family = FONT_FAMILY),
       panel.border = element_rect(color = "black", fill = NA, size = 0.8),
       axis.line = element_blank() 
     )
@@ -267,7 +290,7 @@ run_sensitivity_analysis <- function(ds_name, k = 0.7, seed = 42) {
     Segments_Fused      = segment_count_list,
     Variables_Selected  = variable_count_list,
     Cp                  = round(cp_vals[lambda_idx_seq], 6),
-    Is_Optimal_Cp       = ifelse(seq_len(n_grid) == opt_k_idx, "YES", "")
+    Is_Optimal_Cp       = ifelse(seq_along(lambda_idx_seq) == opt_k_idx, "YES", "")
   )
   csv_path <- file.path(out_dir, paste0("lambda_rmsecv_intervals_", ds_name, ".csv"))
   write.csv(df_csv, csv_path, row.names = FALSE)

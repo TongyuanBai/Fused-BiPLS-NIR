@@ -1,3 +1,22 @@
+# ==============================================================================
+# Fused-BiPLS: benchmark comparison on six NIR datasets (Table 3 of the paper)
+#
+# For each dataset, 30 random 80/20 partitions are generated. Within each
+# calibration pool, a training subset of size floor(k * n_pool) is drawn with
+# the Kennard-Stone algorithm for k in {0.5, 0.7, 1.0}. All methods (Fused-BiPLS,
+# PLS, PCR, LASSO, MWPLS, MC-UVE and SCARS) use the same partitions and the same
+# MSC + mean-centering preprocessing, estimated on the training subset only.
+#
+# Usage (from the repository root):
+#   Rscript code/benchmark_models.R
+#
+# Input : data files in ./data (see data/README.md); set the environment
+#         variable FUSED_BIPLS_DATA_DIR to use another folder.
+# Output: ./results/<dataset>_All_Methods_Detailed.csv  (one row per run)
+#         ./results/<dataset>_All_Methods_Summary.csv   (mean and sd per method and k)
+#         ./results/<dataset>_Learning_Curve.png
+# ==============================================================================
+
 library(parallel)
 library(genlasso)
 library(prospectr)
@@ -13,47 +32,54 @@ seeds <- 1:30    # 30 independent random splits for robust evaluation
 k_list <- c(0.5, 0.7, 1.0)
 MAX_LVS <- 20    # Maximum number of latent variables for full-spectrum PLS/PCR/BiPLS
 
-# Relative path for outputs (ensures reproducibility across different machines)
+# Relative paths (run the script from the repository root)
+data_dir <- Sys.getenv("FUSED_BIPLS_DATA_DIR", "./data")
 out_dir <- "./results"
 if(!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
 
 dataset_names <- c("corn", "diesel", "meat", "milk", "soil", "tablet")
 
 # ======= 2. Data Loading Function =======
+# Locate a data file; the match is case-insensitive (e.g. NIRdata_tablets.MAT).
+data_file <- function(file_name) {
+  hits <- list.files(data_dir, full.names = TRUE)
+  hits <- hits[tolower(basename(hits)) == tolower(file_name)]
+  if (length(hits) == 0) stop(sprintf("File '%s' not found in '%s'. See data/README.md.", file_name, data_dir))
+  hits[1]
+}
+
 load_dataset <- function(ds_name) {
-  data_dir <- "./data"
-  
   if (ds_name == "corn") {
-    mat_data <- readMat(file.path(data_dir, "corn.mat"))
-    y <- as.numeric(mat_data$propvals$data[, 1])
-    X <- as.matrix(mat_data$m5spec$data)
-    
+    mat_data <- readMat(data_file("corn.mat"))
+    y <- as.numeric(mat_data$propvals$data[, 1])   # moisture
+    X <- as.matrix(mat_data$m5spec$data)           # m5 instrument, 700 channels
+
   } else if (ds_name == "diesel") {
-    df <- read.csv(file.path(data_dir, "Filtered_Diesel_Spec_Data.csv"), header = TRUE)
-    y  <- as.numeric(df[,1])
-    X  <- as.matrix(df[,-1])
-    
+    df <- read.csv(data_file("Filtered_Diesel_Spec_Data.csv"), header = TRUE)
+    y  <- as.numeric(df[,1])                       # density
+    X  <- as.matrix(df[,-1])                       # 401 channels
+
   } else if (ds_name == "meat") {
-    df <- read_excel(file.path(data_dir, "Tecator.xlsx"))
-    y  <- as.numeric(df[[1]])
-    X  <- as.matrix(df[, -1])
-    
+    df <- read_excel(data_file("Tecator.xlsx"))
+    y  <- as.numeric(df[[1]])                      # fat
+    X  <- as.matrix(df[, -1])                      # 100 channels
+
   } else if (ds_name == "milk") {
-    mat_data <- readMat(file.path(data_dir, "milk.mat"))
-    y  <- as.numeric(mat_data$protein)
-    X  <- as.matrix(mat_data$X)
-    
+    mat_data <- readMat(data_file("milk.mat"))
+    y  <- as.numeric(mat_data$protein)             # protein
+    X  <- as.matrix(mat_data$X)                    # 1557 channels
+
   } else if (ds_name == "soil") {
-    df <- readMat(file.path(data_dir, "NIRsoil.mat"))
-    y  <- as.numeric(df$soilref$data[,1])
-    X  <- as.matrix(df$soil$data)
-    
+    df <- readMat(data_file("NIRsoil.mat"))
+    y  <- as.numeric(df$soilref$data[,1])          # soil organic matter
+    X  <- as.matrix(df$soil$data)                  # 1050 channels
+
   } else if (ds_name == "tablet") {
-    mat_data <- readMat(file.path(data_dir, "NIRdata_tablets.mat"))
-    y  <- as.numeric(mat_data$Matrix[, 1])
-    X  <- as.matrix(mat_data$Matrix[, 4:407])
+    mat_data <- readMat(data_file("NIRdata_tablets.mat"))
+    y  <- as.numeric(mat_data$Matrix[, 1])         # active ingredient
+    X  <- as.matrix(mat_data$Matrix[, 4:407])      # 404 channels
   }
-  
+
   return(list(X = X, y = y))
 }
 

@@ -1,0 +1,8 @@
+# Python packages for the figure scripts (code/*.py)
+numpy
+pandas
+scipy
+matplotlib
+scikit-learn
+openpyxl
+cvxpy

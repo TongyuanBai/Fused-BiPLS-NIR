@@ -1,0 +1,20 @@
+# Data are not distributed with the repository (see data/README.md)
+data/*
+!data/README.md
+dataset/
+
+# Outputs
+results/
+
+# R
+.Rhistory
+.RData
+.Rproj.user/
+
+# Python
+__pycache__/
+*.pyc
+
+# System files
+.DS_Store
+Thumbs.db
