@@ -6,6 +6,10 @@ This repository contains the code for the following article:
 
 Fused-BiPLS is a two-stage wavelength-interval selection method for multivariate calibration of near-infrared (NIR) spectra. The first stage determines contiguous spectral segments; the second stage selects a subset of these segments for a partial least squares (PLS) model.
 
+![Coefficient estimates on simulated collinear spectra](docs/figure2.png)
+
+*Figure 2 of the article, produced by `code/simulation_figure2.py`: regression coefficients on simulated collinear spectra with two contiguous blocks of non-zero coefficients. (a) True coefficients; estimates of (b) LASSO, (c) PLS and (d) the fused lasso.*
+
 ## Method
 
 1. **Segmentation by the fused lasso.** A fused lasso penalty on the first-order differences of adjacent regression coefficients is solved along its exact solution path (`genlasso`). The regularization parameter λ is the value on the path that minimizes Mallows' Cp, with the noise variance estimated from the cross-validated error of a full-spectrum PLS model. The resulting piecewise-constant coefficient profile defines contiguous segments; segments narrower than three channels are merged with a neighbouring segment.
@@ -25,6 +29,8 @@ Spectra are corrected by multiplicative scatter correction (MSC) and mean-centre
 │   └── plot_figure4_sensitivity.py # Figure 4: number of intervals and RMSECV against log(λ)
 ├── data/
 │   └── README.md                   # Sources and expected file names of the datasets
+├── docs/
+│   └── figure2.png                 # Figure 2, shown in this README
 ├── requirements.txt                # Python packages for the figure scripts
 └── LICENSE
 ```
